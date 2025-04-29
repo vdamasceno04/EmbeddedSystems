@@ -1,14 +1,7 @@
-/**
- * Disciplina: Sistemas Embarcados - DAELN-UTFPR
- * Autor: Prof. Eduardo N. dos Santos (adaptado)
- * 
- * Programa modificado: Alterna LEDs na Tiva C TM4C1294
- * após receber tecla + ENTER via UART.
- */
-
 #include <stdint.h>
 #include <stdbool.h>
 #include "inc/hw_memmap.h"
+#include "inc/hw_types.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/gpio.h"
 #include "driverlib/uart.h"
@@ -21,6 +14,10 @@
 #define LED_PIN_0 GPIO_PIN_0 // LED2 (PN0/PF0)
 #define LED_PIN_4 GPIO_PIN_4 // LED3 (PF4)
 
+#define PB_PORT GPIO_PORTJ_BASE
+#define PB_1 GPIO_PIN_0
+#define PB_2 GPIO_PIN_1
+
 uint32_t SysClock;
 volatile char rxbuffer = 0;
 
@@ -32,8 +29,7 @@ void UARTIntHandler(void) {
     UARTIntClear(UART0_BASE, status);
 
     uint8_t received = (uint8_t)UARTCharGetNonBlocking(UART0_BASE);
-
-    if (received == '\r') { // ENTER foi apertado
+		if (received == '\r') { // ENTER foi apertado
         switch (rxbuffer) {
             case '1':
                 GPIOPinWrite(LED_PORTN, LED_PIN_1, ~(GPIOPinRead(LED_PORTN, LED_PIN_1)) & LED_PIN_1);
@@ -51,7 +47,19 @@ void UARTIntHandler(void) {
                 GPIOPinWrite(LED_PORTF, LED_PIN_0, ~(GPIOPinRead(LED_PORTF, LED_PIN_0)) & LED_PIN_0);
                 UARTSendString("LED 4 Trocado\r\n");
                 break;
-            default:
+						case '5':
+								if (GPIOPinRead(PB_PORT, PB_1)==0)
+									UARTSendString("Push Button 1 pressionado\r\n");
+								else
+									UARTSendString("Push Button 1 solto\r\n");
+								break;
+						case '6':
+								if (GPIOPinRead(PB_PORT, PB_2)==0)
+									UARTSendString("Push Button 2 pressionado\r\n");
+								else
+									UARTSendString("Push Button 2 solto\r\n");
+								break;
+						default:
                 UARTSendString("Tecla invalida\r\n");
                 break;
         }
@@ -80,11 +88,16 @@ void SetupUart(void) {
 void ConfigLEDs(void) {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
+		SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOJ);
     GPIOPinTypeGPIOOutput(LED_PORTN, LED_PIN_1 | LED_PIN_0);
     GPIOPinTypeGPIOOutput(LED_PORTF, LED_PIN_4 | LED_PIN_0);
 }
 
-// Enviar string pela UART
+void ConfigPBs(void){
+	GPIOPinTypeGPIOInput(PB_PORT, PB_1 | PB_2);
+	GPIOPadConfigSet(PB_PORT, PB_1 | PB_2, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+}
+	// Enviar string pela UART
 void UARTSendString(const char *str) {
     while (*str != '\0') {
         UARTCharPut(UART0_BASE, *str++);
@@ -96,7 +109,7 @@ int main(void) {
 
     ConfigLEDs();
     SetupUart();
-
+		ConfigPBs();
     while (1) {
         __asm(" WFI"); // Espera por interrupção
     }
