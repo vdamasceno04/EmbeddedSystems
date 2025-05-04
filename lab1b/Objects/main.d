@@ -8,5 +8,4 @@
   C:\ti\TivaWare_C_Series-2.2.0.295\driverlib\pin_map.h \
   C:\ti\TivaWare_C_Series-2.2.0.295\driverlib\interrupt.h \
   C:\ti\TivaWare_C_Series-2.2.0.295\driverlib\systick.h \
-  C:\Keil_v5\ARM\ARMCLANG\include\time.h \
   C:\Keil_v5\ARM\ARMCLANG\include\stdio.h
