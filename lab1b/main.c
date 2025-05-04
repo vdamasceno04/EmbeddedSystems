@@ -37,6 +37,7 @@ volatile uint32_t counter_ms = 0;
 volatile bool counting = false;
 volatile uint32_t debounceCounter = 0;
 volatile bool debounceActive = false;
+volatile bool reactionCaptured = false;
 
 
 void UARTSendString(const char *str);
@@ -44,8 +45,8 @@ void UARTSendString(const char *str);
 void SysTick_Handler(void) {
     if (counting) {
         counter_ms++;
-        if (counter_ms >= 5000) {  // Tempo máximo para resposta
-            state = 2;
+        if (counter_ms >= 5000 & state == 1) {  // Tempo máximo para resposta
+            state = 99;
             counting = false;
         }
     }
@@ -70,14 +71,18 @@ void Button_Handler(void) {
     debounceActive = true; // Ativa debounce
 
 		if (status & BUTTON1_PIN) {
-				if (state == 1 && counting) {
-						reactionTime = counter_ms;
-						counting = false;
-						state = 2;
-				} else {
-						state += 1;
+			if (state == 1 && counting) {
+					reactionTime = counter_ms;
+					reactionCaptured = true;
+					counting = false;
+					state = 2;
+			}
+		 else if (state == 0) {
+					state = 1; // Só avança para 1 a partir do estado 0
 				}
+				
 		}
+
 
     if (status & BUTTON2_PIN) {
         resetFlag = true;
@@ -177,41 +182,46 @@ int main(void) {
 					ledsOn(LEDS_ON_ALL);
 					UARTSendString("estado 0\r\n");
 					reactionTime = 0;
+					counter_ms = 0;
         }
 				else if (state == 1){
 					UARTSendString("estado 1\r\n");
-					counter_ms = 0;     // Zera o contador
 					counting = true;    // Inicia contagem
 				}
 
 
-			else if (state == 2){
-					counting = false; // apenas para garantir
-					char buffer[64];
-					UARTSendString("estado 2\r\n");
-					snprintf(buffer, sizeof(buffer), "Tempo de reacao: %lu ms\r\n", reactionTime);
-					UARTSendString(buffer);
-					state += 1;
-			}
+		else if (state == 2){
+				counting = false;
+				UARTSendString("estado 2\r\n");
+				if (reactionCaptured) {
+						char buffer[64];
+						snprintf(buffer, sizeof(buffer), "Tempo de reacao: %lu ms\r\n", reactionTime);
+						UARTSendString(buffer);
+						reactionCaptured = false;  // Limpa a flag
+				}
+				state += 1;
+		}
+
 
 
 					else if (state == 3){
 					UARTSendString("estado 3\r\n");
-					reactionTime = counter_ms;  // Tempo de reação em milissegundos
-					char buffer[64];
-					//snprintf(buffer, sizeof(buffer), "Tempo de reacao: %lu ms\r\n", reactionTime);
-					//UARTSendString(buffer);
-					state += 1;
-					
+										
 			}
-				else if (state >1000)
+				else if (state == 99)
+					UARTSendString("TIMEOUT\r\n");
 					ledsOn(LEDS_ON_34);
 				
-        if (resetFlag) {
+			if (resetFlag) {
 					resetFlag = false;
 					state = 0;
-					ledsOn(LEDS_ON_ALL); // Reinicia estado
-        }
+					counter_ms = 0;        // Zera contador
+					counting = false;      // Para contagem
+					debounceActive = false; // Garante que botão esteja liberado
+					reactionTime = 0;
+					ledsOn(LEDS_ON_ALL);   // LEDs padrão
+			}
+
 
         __asm(" WFI"); 
 	}
