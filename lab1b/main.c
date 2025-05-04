@@ -9,6 +9,7 @@
 #include "driverlib/interrupt.h"
 #include "driverlib/systick.h"
 #include <time.h>
+#include <stdio.h>
 
 #define LED_PORTN GPIO_PORTN_BASE
 #define LED_PORTF GPIO_PORTF_BASE
@@ -68,9 +69,16 @@ void Button_Handler(void) {
 
     debounceActive = true; // Ativa debounce
 
-    if (status & BUTTON1_PIN) {
-        state += 1;
-    }
+		if (status & BUTTON1_PIN) {
+				if (state == 1 && counting) {
+						reactionTime = counter_ms;
+						counting = false;
+						state = 2;
+				} else {
+						state += 1;
+				}
+		}
+
     if (status & BUTTON2_PIN) {
         resetFlag = true;
     }
@@ -168,24 +176,33 @@ int main(void) {
         if (state == 0) {
 					ledsOn(LEDS_ON_ALL);
 					UARTSendString("estado 0\r\n");
+					reactionTime = 0;
         }
 				else if (state == 1){
-					counter_ms = 0;
-					counting = true;
 					UARTSendString("estado 1\r\n");
+					counter_ms = 0;     // Zera o contador
+					counting = true;    // Inicia contagem
 				}
 
-				else if (state == 2){
-					counting = false;
-					ledsOn(LEDS_ON_12);
-					UARTSendString("estado 2\r\n");
-					reactionTime = counter_ms;  // Tempo de reação em milissegundos
 
+			else if (state == 2){
+					counting = false; // apenas para garantir
+					char buffer[64];
+					UARTSendString("estado 2\r\n");
+					snprintf(buffer, sizeof(buffer), "Tempo de reacao: %lu ms\r\n", reactionTime);
+					UARTSendString(buffer);
+					state += 1;
+			}
+
+
+					else if (state == 3){
+					UARTSendString("estado 3\r\n");
+					reactionTime = counter_ms;  // Tempo de reação em milissegundos
 					char buffer[64];
 					//snprintf(buffer, sizeof(buffer), "Tempo de reacao: %lu ms\r\n", reactionTime);
-					UARTSendString(buffer);
-
-					SysCtlDelay(SysClock / 6); // delay de ~200ms
+					//UARTSendString(buffer);
+					state += 1;
+					
 			}
 				else if (state >1000)
 					ledsOn(LEDS_ON_34);
