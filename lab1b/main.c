@@ -7,6 +7,7 @@
 #include "driverlib/uart.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/interrupt.h"
+#include "driverlib/systick.h"
 #include <time.h>
 
 #define LED_PORTN GPIO_PORTN_BASE
@@ -30,21 +31,51 @@ volatile uint32_t reactionTime = 0;
 
 uint32_t SysClock;
 bool resetFlag = false;
-bool buttonFlag = false;
+int state = 0;
+volatile uint32_t counter_ms = 0;
+volatile bool counting = false;
+volatile uint32_t debounceCounter = 0;
+volatile bool debounceActive = false;
+
 
 void UARTSendString(const char *str);
 
+void SysTick_Handler(void) {
+    if (counting) {
+        counter_ms++;
+        if (counter_ms >= 5000) {  // Tempo máximo para resposta
+            state = 2;
+            counting = false;
+        }
+    }
+
+    if (debounceActive) {
+        debounceCounter++;
+        if (debounceCounter >= 200) {  // 200 ms de debounce
+            debounceActive = false;
+            debounceCounter = 0;
+        }
+    }
+}
+
+
+
 void Button_Handler(void) {
-    uint32_t status = GPIOIntStatus(BUTTON_PORT, true); // Verifica quais pinos causaram a interrupção
-    GPIOIntClear(BUTTON_PORT, status); // Limpa as flags da interrupção
+    if (debounceActive) return; // Ignora se ainda estiver em debounce
+
+    uint32_t status = GPIOIntStatus(BUTTON_PORT, true); // Verifica qual botão
+    GPIOIntClear(BUTTON_PORT, status); // Limpa flags
+
+    debounceActive = true; // Ativa debounce
 
     if (status & BUTTON1_PIN) {
-        buttonFlag = true;
+        state += 1;
     }
     if (status & BUTTON2_PIN) {
         resetFlag = true;
     }
 }
+
 
 void UARTIntHandler(void) {
     uint32_t status = UARTIntStatus(UART0_BASE, true);
@@ -120,20 +151,49 @@ int main(void) {
     // Configure Button interrupt
     GPIOIntDisable(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN);
     GPIOIntClear(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN);
-    GPIOIntTypeSet(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN, GPIO_BOTH_EDGES);
+    GPIOIntTypeSet(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN, GPIO_RISING_EDGE);
     GPIOIntRegister(BUTTON_PORT, Button_Handler);
     GPIOIntEnable(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN);
-    //SetupUart();
+    SetupUart();
 		ConfigPBs();
-		while(1){
-        if (buttonFlag) {
-            buttonFlag = false;
-            ledsOn(LEDS_ON_12);  // Acende LED1 e LED2
-        }
+	    // Configure SysTick
+    SysTickPeriodSet(SysCtlClockGet() / 1000); // 1ms period
+    SysTickIntEnable();
+    SysTickEnable();
 
+    // Enable Interrupts
+    IntMasterEnable();
+	
+		while(1){
+        if (state == 0) {
+					ledsOn(LEDS_ON_ALL);
+					UARTSendString("estado 0\r\n");
+        }
+				else if (state == 1){
+					counter_ms = 0;
+					counting = true;
+					UARTSendString("estado 1\r\n");
+				}
+
+				else if (state == 2){
+					counting = false;
+					ledsOn(LEDS_ON_12);
+					UARTSendString("estado 2\r\n");
+					reactionTime = counter_ms;  // Tempo de reação em milissegundos
+
+					char buffer[64];
+					//snprintf(buffer, sizeof(buffer), "Tempo de reacao: %lu ms\r\n", reactionTime);
+					UARTSendString(buffer);
+
+					SysCtlDelay(SysClock / 6); // delay de ~200ms
+			}
+				else if (state >1000)
+					ledsOn(LEDS_ON_34);
+				
         if (resetFlag) {
-            resetFlag = false;
-            ledsOn(LEDS_ON_ALL); // Reinicia estado
+					resetFlag = false;
+					state = 0;
+					ledsOn(LEDS_ON_ALL); // Reinicia estado
         }
 
         __asm(" WFI"); 
