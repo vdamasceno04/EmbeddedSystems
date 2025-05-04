@@ -137,6 +137,11 @@ void ConfigPBs(void) {
     GPIOPinTypeGPIOInput(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN);
     GPIOPadConfigSet(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN,
                      GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+    GPIOIntDisable(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN);
+    GPIOIntClear(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN);
+    GPIOIntTypeSet(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN, GPIO_RISING_EDGE);
+    GPIOIntRegister(BUTTON_PORT, Button_Handler);
+    GPIOIntEnable(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN);
 }
 
 void UARTSendString(const char *str) {
@@ -152,16 +157,6 @@ int main(void) {
     ConfigLEDs();
     ConfigPBs();
     SetupUart();
-
-    // Configure botão com interrupção
-    GPIOPinTypeGPIOInput(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN);
-    GPIOPadConfigSet(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN,
-                     GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
-    GPIOIntDisable(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN);
-    GPIOIntClear(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN);
-    GPIOIntTypeSet(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN, GPIO_RISING_EDGE);
-    GPIOIntRegister(BUTTON_PORT, Button_Handler);
-    GPIOIntEnable(BUTTON_PORT, BUTTON1_PIN | BUTTON2_PIN);
 
     // Configura SysTick para 1ms com base no clock real
     SysTickPeriodSet(SysClock / 1000);
