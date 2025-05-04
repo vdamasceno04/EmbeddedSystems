@@ -170,7 +170,7 @@ int main(void) {
     SetupUart();
 		ConfigPBs();
 	    // Configure SysTick
-    SysTickPeriodSet(SysCtlClockGet() / 1000); // 1ms period
+    SysTickPeriodSet(SysClock / 1000); // 1ms period
     SysTickIntEnable();
     SysTickEnable();
 
@@ -200,14 +200,8 @@ int main(void) {
 						reactionCaptured = false;  // Limpa a flag
 				}
 				state += 1;
-		}
-
-
-
-					else if (state == 3){
-					UARTSendString("estado 3\r\n");
-										
-			}
+		}							
+			
 				else if (state == 99)
 					UARTSendString("TIMEOUT\r\n");
 					ledsOn(LEDS_ON_34);
