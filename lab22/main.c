@@ -5,6 +5,7 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/gpio.h"
 #include "driverlib/uart.h"
+#include "driverlib/pwm.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/systick.h"
@@ -27,11 +28,6 @@ uint32_t SysClock;
 #define LED_PIN_0 GPIO_PIN_0
 #define LED_PIN_4 GPIO_PIN_4
 
-// Botões
-#define BUTTON_PORT   GPIO_PORTJ_BASE
-#define BUTTON1_PIN   GPIO_PIN_0
-#define BUTTON2_PIN   GPIO_PIN_1
-
 // Estados do sistema
 typedef enum {
     STATE_INIT = 0,
@@ -53,6 +49,14 @@ typedef enum {
 State currentState = STATE_INIT;
 uint32_t adcValue;
 
+#define PWM_FREQUENCY 12000 // Frequencia do PWM
+volatile uint32_t g_ui32PWMDutyCycle = 0; // Var. para guardar o status do DutyCycle
+bool g_bFadeUp = true; //Controle e direcao do fade.
+
+void setupPWM(void);
+void setupTimer(void);
+void Timer0IntHandler(void);
+void UARTSend(const char *pui8Buffer);
 
 void ledsOn(int leds) {
     uint8_t portN_value = 0;
@@ -91,22 +95,23 @@ void UARTIntHandler(void) {
 }
 
 void Timer0IntHandler(void) {
+    // Limpa a interrupção do Timer0
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
 
-    // Lê o valor do ADC (potenciômetro)
+    // Dispara leitura do ADC
     ADCProcessorTrigger(ADC0_BASE, ADC_SEQUENCER);
     while(!ADCIntStatus(ADC0_BASE, ADC_SEQUENCER, false));
     ADCIntClear(ADC0_BASE, ADC_SEQUENCER);
     ADCSequenceDataGet(ADC0_BASE, ADC_SEQUENCER, &adcValue);
 
-    // Exibe via UART (opcional)
+    // Mostra valor do ADC via UART
     char buffer[10];
     int len = snprintf(buffer, sizeof(buffer), "%u\r\n", adcValue);
     for (int i = 0; i < len; i++) {
         UARTCharPut(UART0_BASE, buffer[i]);
     }
 
-    // Define o estado com base na porcentagem do valor ADC
+    // Define estado conforme valor do ADC
     if (adcValue < 1024) {
         currentState = STATE_OFF;
     } else if (adcValue < 2048) {
@@ -116,6 +121,27 @@ void Timer0IntHandler(void) {
     } else {
         currentState = STATE_HIGH;
     }
+
+    // PWM fixo com base no estado
+    uint32_t load = PWMGenPeriodGet(PWM0_BASE, PWM_GEN_2);
+    uint32_t pulseWidth = 0;
+
+    switch (currentState) {
+        case STATE_OFF:
+            pulseWidth = 0;
+            break;
+        case STATE_LOW:
+            pulseWidth = (25 * load) / 100;
+            break;
+        case STATE_MEDIUM:
+            pulseWidth = (50 * load) / 100;
+            break;
+        case STATE_HIGH:
+            pulseWidth = (75 * load) / 100;
+            break;
+    }
+
+    PWMPulseWidthSet(PWM0_BASE, PWM_OUT_5, pulseWidth);
 }
 
 
@@ -154,6 +180,34 @@ void SetupUart(void) {
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 }
 
+void setupPWM(void) {
+    // Habilita os módulos necessários
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_PWM0);
+    while (!SysCtlPeripheralReady(SYSCTL_PERIPH_PWM0));
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOG);
+    while (!SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOG));
+
+    // Configura o pino PG1 como saída PWM (M0PWM5)
+    GPIOPinConfigure(GPIO_PG1_M0PWM5);
+    GPIOPinTypePWM(GPIO_PORTG_BASE, GPIO_PIN_1);
+
+    // Calcula e configura o período do PWM
+    uint32_t pwmClock = SysClock / 64; // Usa divisor de 64 no clock do PWM
+    PWMClockSet(PWM0_BASE, PWM_SYSCLK_DIV_64);
+    uint32_t load = (pwmClock / PWM_FREQUENCY) - 1;
+
+    PWMGenConfigure(PWM0_BASE, PWM_GEN_2, PWM_GEN_MODE_DOWN | PWM_GEN_MODE_NO_SYNC);
+    PWMGenPeriodSet(PWM0_BASE, PWM_GEN_2, load);
+
+    // Duty cycle inicial (0%)
+    PWMPulseWidthSet(PWM0_BASE, PWM_OUT_5, 0);
+
+    // Ativa a saída PWM e o gerador
+    PWMOutputState(PWM0_BASE, PWM_OUT_5_BIT, true);
+    PWMGenEnable(PWM0_BASE, PWM_GEN_2);
+}
+
+
 void ConfigLEDs(void) {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
@@ -167,6 +221,7 @@ int main(void) {
     SetupUart();
     SetupTimer();
     SetupADC();
+		setupPWM();	
     ConfigLEDs();
 
     IntMasterEnable();
