@@ -50,13 +50,6 @@ typedef enum {
 #define MEDIUM 30
 #define HIGH 35
 
-volatile uint32_t reactionCounterMs = 0;
-volatile bool isCounting = false;
-volatile uint32_t debounceCounter = 0;
-volatile bool debounceActive = false;
-volatile bool reactionCaptured = false;
-volatile bool shouldReset = false;
-volatile uint32_t reactionTime = 0;
 State currentState = STATE_INIT;
 uint32_t adcValue;
 
@@ -186,23 +179,15 @@ int main(void) {
 
             case STATE_LOW:
 								ledsOn(LEDS_ON_12);
-                isCounting = true;
                 break;
 
             case STATE_MEDIUM:
 								ledsOn(LEDS_ON_123);
-                isCounting = false;
                 break;
 
             case STATE_HIGH:
 								ledsOn(LEDS_ON_ALL);
                 break;
-        }
-
-        if (shouldReset) {
-            shouldReset = false;
-            //currentState = STATE_INIT;
-            //ledsOn(LEDS_ON_ALL);
         }
 
         __asm(" WFI");
