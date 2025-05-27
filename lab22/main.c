@@ -159,11 +159,17 @@ void SetupTimer(void) {
 void SetupADC(void) {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
     while(!SysCtlPeripheralReady(SYSCTL_PERIPH_ADC0));
+
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOE));
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_4);  // PE4 = AIN9
+
     ADCSequenceConfigure(ADC0_BASE, ADC_SEQUENCER, ADC_TRIGGER_PROCESSOR, 0);
-    ADCSequenceStepConfigure(ADC0_BASE, ADC_SEQUENCER, 0, ADC_CTL_CH0 | ADC_CTL_IE | ADC_CTL_END);
+    ADCSequenceStepConfigure(ADC0_BASE, ADC_SEQUENCER, 0, ADC_CTL_CH9 | ADC_CTL_IE | ADC_CTL_END);
     ADCSequenceEnable(ADC0_BASE, ADC_SEQUENCER);
     ADCIntClear(ADC0_BASE, ADC_SEQUENCER);
 }
+
 
 void SetupUart(void) {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
