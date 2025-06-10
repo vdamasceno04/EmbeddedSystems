@@ -1,0 +1,10 @@
+Dependencies for Project 'Lab1', Target 'Target 1': (DO NOT MODIFY !)
+CompilerVersion: 6210000::V6.21::ARMCLANG
+F (.\main.c)(0x663CFFB0)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__RTX -D__EVAL -D__MICROLIB -gdwarf-4 -ffunction-sections -w -I C:/ti/TivaWare_C_Series-2.2.0.295-I./RTE/CMSIS-I./RTE/_Target_1-IC:/Users/Eduardo/AppData/Local/Arm/Packs/ARM/CMSIS/5.9.0/CMSIS/Core/Include-IC:/Users/Eduardo/AppData/Local/Arm/Packs/ARM/CMSIS/5.9.0/CMSIS/RTOS2/Include-IC:/Users/Eduardo/AppData/Local/Arm/Packs/ARM/CMSIS/5.9.0/CMSIS/RTOS2/RTX/Include-IC:/Users/Eduardo/AppData/Local/Arm/Packs/Keil/TM4C_DFP/1.1.0/Device/Include/TM4C129-D__UVISION_VERSION="539" -D_RTE_ -DTM4C1294NCPDT -D_RTE_ -Drvmdk -DPART_TM4C1294NCPDT -DTARGET_IS_TM4C129_RA1-o ./objects/main.o -MD)
+I (C:\Keil_v5\ARM\ARMCLANG\include\stdbool.h)(0x656A4AC2)
+I (C:\Keil_v5\ARM\ARMCLANG\include\stdio.h)(0x656A4AC2)
+F (C:\ti\TivaWare_C_Series-2.2.0.295\driverlib\rvmdk\driverlib.lib)(0x6808089E)()
+F (RTE/CMSIS/RTX_Config.c)(0x626FE58E)()
+F (RTE/CMSIS/RTX_Config.h)(0x626FE58E)()
+F (RTE/Device/TM4C1294NCPDT/startup_TM4C129.s)(0x51C0453A)()
+F (RTE/Device/TM4C1294NCPDT/system_TM4C129.c)(0x5253F274)()

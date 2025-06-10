@@ -190,12 +190,12 @@ void setupPWM(void) {
     // Habilita os módulos necessários
     SysCtlPeripheralEnable(SYSCTL_PERIPH_PWM0);
     while (!SysCtlPeripheralReady(SYSCTL_PERIPH_PWM0));
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOG);
-    while (!SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOG));
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
+    while (!SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOE));
 
     // Configura o pino PG1 como saída PWM (M0PWM5)
-    GPIOPinConfigure(GPIO_PG1_M0PWM5);
-    GPIOPinTypePWM(GPIO_PORTG_BASE, GPIO_PIN_1);
+    GPIOPinConfigure(GPIO_PE0_U1RTS);
+    GPIOPinTypePWM(GPIO_PORTE_BASE, GPIO_PIN_0);
 
     // Calcula e configura o período do PWM
     uint32_t pwmClock = SysClock / 64; // Usa divisor de 64 no clock do PWM
